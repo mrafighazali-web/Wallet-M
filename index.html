@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DompetSantri</title>
+<style>
+  :root {
+    --bg: #f4f6f8;
+    --card: #ffffff;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --dompet: #16a34a;
+    --dana: #2563eb;
+    --shopeepay: #f97316;
+    --gopay: #0ea5e9;
+    --atm: #6b7280;
+    --darurat: #dc2626;
+    --primary: #111827;
+    --danger: #dc2626;
+    --success: #16a34a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding-bottom: 80px;
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--card);
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  header h1 { font-size: 18px; }
+  header .back {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--text);
+    padding: 4px 8px;
+  }
+
+  main { padding: 16px; }
+
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+  }
+
+  .balance-big {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-top: 4px;
+  }
+  .balance-label {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .summary-grid .item {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+  }
+  .summary-grid .item .label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .summary-grid .item .value {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .account-list { list-style: none; }
+  .account-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .account-list li:last-child { border-bottom: none; }
+  .account-list li .name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+  }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .account-list li .amount {
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .quick-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .quick-actions button {
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text);
+  }
+  .quick-actions button:hover { background: var(--bg); }
+
+  .tx-list { list-style: none; }
+  .tx-list li {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    font-size: 13px;
+  }
+  .tx-list li:last-child { border-bottom: none; }
+  .tx-list .desc { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .tx-list .amount.income { color: var(--success); font-weight: 600; }
+  .tx-list .amount.expense { color: var(--danger); font-weight: 600; }
+
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    padding: 20px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    overflow-x: auto;
+  }
+  .tabs button {
+    padding: 8px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .tabs button.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+
+  nav.bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  nav.bottom button {
+    background: none;
+    border: none;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+  nav.bottom button.active { color: var(--primary); font-weight: 600; }
+  nav.bottom .icon { font-size: 18px; }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: none;
+    justify-content: center;
+    align-items: flex-end;
+    z-index: 100;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: var(--card);
+    width: 100%;
+    max-width: 480px;
+    border-radius: 16px 16px 0 0;
+    padding: 20px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal h2 {
+    font-size: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal h2 button {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--muted);
+  }
+  .form-group { margin-bottom: 12px; }
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--bg);
+  }
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+  .modal .submit {
+    width: 100%;
+    padding: 12px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  .modal .submit:hover { opacity: 0.9; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="back hidden" id="backBtn">←</button>
+  <h1 id="pageTitle">DompetSantri</h1>
+  <span style="width:24px"></span>
+</header>
+
+<main id="app"></main>
+
+<nav class="bottom">
+  <button data-nav="dashboard" class="active">
+    <span class="icon">🏠</span>Home
+  </button>
+  <button data-nav="dompet">
+    <span class="icon">👛</span>Dompet
+  </button>
+  <button data-nav="digital">
+    <span class="icon">💳</span>Digital
+  </button>
+  <button data-nav="atm">
+    <span class="icon">🏦</span>ATM
+  </button>
+  <button data-nav="darurat">
+    <span class="icon">🆘</span>Darurat
+  </button>
+</nav>
+
+<!-- Modal Transaksi -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+/* =========================================================
+   STORAGE
+========================================================= */
+const STORAGE_KEY = 'dompetsantri_v1';
+
+const defaultState = {
+  accounts: {
+    dompet:    { name: 'Dompet',        icon: '👛', color: 'var(--dompet)',    balance: 0 },
+    dana:      { name: 'Dana',          icon: '💳', color: 'var(--dana)',      balance: 0 },
+    shopeepay: { name: 'ShopeePay',     icon: '💳', color: 'var(--shopeepay)', balance: 0 },
+    gopay:     { name: 'GoPay',         icon: '💳', color: 'var(--gopay)',     balance: 0 },
+    atm:       { name: 'ATM',           icon: '🏦', color: 'var(--atm)',       balance: 0 },
+    darurat:   { name: 'Tabungan Darurat', icon: '🆘', color: 'var(--darurat)', balance: 0 }
+  },
+  transactions: []
+};
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return structuredClone(defaultState);
+    const parsed = JSON.parse(raw);
+    // merge agar akun baru tetap ada jika struktur berubah
+    parsed.accounts = { ...defaultState.accounts, ...parsed.accounts };
+    parsed.transactions = parsed.transactions || [];
+    return parsed;
+  } catch (e) {
+    return structuredClone(defaultState);
+  }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+let state = loadState();
+
+/* =========================================================
+   HELPERS
+========================================================= */
+const fmt = (n) => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+function totalSaldo() {
+  return Object.values(state.accounts).reduce((s, a) => s + a.balance, 0);
+}
+
+function monthSummary() {
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  let income = 0, expense = 0;
+  state.transactions.forEach(t => {
+    if (!t.date.startsWith(ym)) return;
+    if (t.type === 'income') income += t.amount;
+    if (t.type === 'expense') expense += t.amount;
+  });
+  return { income, expense, balance: income - expense };
+}
+
+function txForAccount(key) {
+  return state.transactions
+    .filter(t => t.account === key || t.toAccount === key)
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+/* =========================================================
+   RENDER: PAGES
+========================================================= */
+const app = document.getElementById('app');
+const pageTitle = document.getElementById('pageTitle');
+const backBtn = document.getElementById('backBtn');
+
+let currentPage = 'dashboard';
+let digitalTab = 'dana';
+
+function render() {
+  const navButtons = document.querySelectorAll('nav.bottom button');
+  navButtons.forEach(b => b.classList.toggle('active', b.dataset.nav === currentPage));
+
+  if (currentPage === 'dashboard') renderDashboard();
+  else if (currentPage === 'dompet') renderAccount('dompet');
+  else if (currentPage === 'digital') renderDigital();
+  else if (currentPage === 'atm') renderAccount('atm');
+  else if (currentPage === 'darurat') renderAccount('darurat');
+}
+
+/* ---------- Dashboard ---------- */
+function renderDashboard() {
+  pageTitle.textContent = 'DompetSantri';
+  backBtn.classList.add('hidden');
+
+  const s = monthSummary();
+  const accountsHTML = Object.entries(state.accounts).map(([key, a]) => `
+    <li onclick="goToAccount('${key}')">
+      <span class="name">
+        <span class="dot" style="background:${a.color}"></span>
+        ${a.icon} ${a.name}
+      </span>
+      <span class="amount">${fmt(a.balance)}</span>
+    </li>
+  `).join('');
+
+  const recentTx = state.transactions.slice(-5).reverse();
+  const recentHTML = recentTx.length === 0
+    ? `<div class="empty">Belum ada transaksi</div>`
+    : `<ul class="tx-list">${recentTx.map(txItemHTML).join('')}</ul>`;
+
+  app.innerHTML = `
+    <div class="card">
+      <div class="balance-label">Uang di Dompet</div>
+      <div class="balance-big" style="color:var(--dompet)">${fmt(state.accounts.dompet.balance)}</div>
+      <div class="balance-label" style="margin-top:12px">Total Semua Saldo</div>
+      <div class="balance-big">${fmt(totalSaldo())}</div>
+    </div>
+
+    <div class="card">
+      <div class="balance-label">Ringkasan Bulan Ini</div>
+      <div class="summary-grid">
+        <div class="item">
+          <div class="label">Masuk</div>
+          <div class="value" style="color:var(--success)">${fmt(s.income)}</div>
+        </div>
+        <div class="item">
+          <div class="label">Keluar</div>
+          <div class="value" style="color:var(--danger)">${fmt(s.expense)}</div>
+        </div>
+        <div class="item">
+          <div class="label">Sisa</div>
+          <div class="value">${fmt(s.balance)}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="balance-label" style="margin-bottom:8px">Saldo Per Akun</div>
+      <ul class="account-list">${accountsHTML}</ul>
+    </div>
+
+    <div class="card">
+      <div class="balance-label" style="margin-bottom:8px">Aksi Cepat</div>
+      <div class="quick-actions">
+        <button onclick="openTxModal('income')">+ Pemasukan</button>
+        <button onclick="openTxModal('expense')">- Pengeluaran</button>
+        <button onclick="openTxModal('transfer')">⇄ Transfer</button>
+        <button onclick="openSettingsModal()">⚙️ Atur Saldo Awal</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="balance-label" style="margin-bottom:8px">Riwayat Terakhir</div>
+      ${recentHTML}
+    </div>
+  `;
+}
+
+/* ---------- Account Page (Dompet / ATM / Darurat) ---------- */
+function renderAccount(key) {
+  const a = state.accounts[key];
+  pageTitle.textContent = a.name;
+  backBtn.classList.remove('hidden');
+
+  const txs = txForAccount(key);
+  const listHTML = txs.length === 0
+    ? `<div class="empty">Belum ada transaksi</div>`
+    : `<ul class="tx-list">${txs.map(txItemHTML).join('')}</ul>`;
+
+  app.innerHTML = `
+    <div class="card">
+      <div class="balance-label">Saldo ${a.name}</div>
+      <div class="balance-big" style="color:${a.color}">${fmt(a.balance)}</div>
+    </div>
+
+    <div class="quick-actions">
+      <button onclick="openTxModal('income','${key}')">+ Pemasukan</button>
+      <button onclick="openTxModal('expense','${key}')">- Pengeluaran</button>
+      <button onclick="openTxModal('transfer','${key}')">⇄ Transfer</button>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="balance-label" style="margin-bottom:8px">Riwayat</div>
+      ${listHTML}
+    </div>
+  `;
+}
+
+/* ---------- Digital Wallets ---------- */
+function renderDigital() {
+  pageTitle.textContent = 'Dompet Digital';
+  backBtn.classList.add('hidden');
+
+  const tabs = ['dana', 'shopeepay', 'gopay'];
+  const tabHTML = tabs.map(t => `
+    <button class="${t === digitalTab ? 'active' : ''}" onclick="setDigitalTab('${t}')">
+      ${state.accounts[t].name}
+    </button>
+  `).join('');
+
+  const a = state.accounts[digitalTab];
+  const txs = txForAccount(digitalTab);
+  const listHTML = txs.length === 0
+    ? `<div class="empty">Belum ada transaksi</div>`
+    : `<ul class="tx-list">${txs.map(txItemHTML).join('')}</ul>`;
+
+  app.innerHTML = `
+    <div class="tabs">${tabHTML}</div>
+
+    <div class="card">
+      <div class="balance-label">Saldo ${a.name}</div>
+      <div class="balance-big" style="color:${a.color}">${fmt(a.balance)}</div>
+    </div>
+
+    <div class="quick-actions">
+      <button onclick="openTxModal('income','${digitalTab}')">+ Pemasukan</button>
+      <button onclick="openTxModal('expense','${digitalTab}')">- Pengeluaran</button>
+      <button onclick="openTxModal('transfer','${digitalTab}')">⇄ Transfer</button>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="balance-label" style="margin-bottom:8px">Riwayat</div>
+      ${listHTML}
+    </div>
+  `;
+}
+
+function setDigitalTab(t) {
+  digitalTab = t;
+  render();
+}
+
+/* ---------- Transaction List Item ---------- */
+function txItemHTML(t) {
+  const isIncome = t.type === 'income';
+  const isExpense = t.type === 'expense';
+  const sign = isIncome ? '+' : isExpense ? '-' : '⇄';
+  const cls = isIncome ? 'income' : isExpense ? 'expense' : '';
+  const title = t.note || (isIncome ? 'Pemasukan' : isExpense ? 'Pengeluaran' : 'Transfer');
+  const sub = isIncome
+    ? `Masuk ke ${state.accounts[t.account].name}`
+    : isExpense
+      ? `Dari ${state.accounts[t.account].name}`
+      : `${state.accounts[t.account].name} → ${state.accounts[t.toAccount].name}`;
+  return `
+    <li>
+      <div>
+        <div>${title}</div>
+        <div class="desc">${sub} • ${t.date}</div>
+      </div>
+      <div class="amount ${cls}">${sign}${fmt(t.amount)}</div>
+    </li>
+  `;
+}
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
+document.querySelectorAll('nav.bottom button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentPage = btn.dataset.nav;
+    render();
+  });
+});
+
+backBtn.addEventListener('click', () => {
+  currentPage = 'dashboard';
+  render();
+});
+
+function goToAccount(key) {
+  if (['dana', 'shopeepay', 'gopay'].includes(key)) {
+    digitalTab = key;
+    currentPage = 'digital';
+  } else {
+    currentPage = key;
+  }
+  render();
+}
+
+/* =========================================================
+   MODAL: TRANSAKSI
+========================================================= */
+const modalBackdrop = document.getElementById('modalBackdrop');
+const modalContent = document.getElementById('modalContent');
+
+function closeModal() {
+  modalBackdrop.classList.remove('show');
+  modalContent.innerHTML = '';
+}
+
+modalBackdrop.addEventListener('click', (e) => {
+  if (e.target === modalBackdrop) closeModal();
+});
+
+function accountOptions(selected) {
+  return Object.entries(state.accounts).map(([k, a]) =>
+    `<option value="${k}" ${k === selected ? 'selected' : ''}>${a.icon} ${a.name}</option>`
+  ).join('');
+}
+
+function openTxModal(type, accountKey) {
+  const isTransfer = type === 'transfer';
+  const title = type === 'income' ? 'Pemasukan' : type === 'expense' ? 'Pengeluaran' : 'Transfer';
+
+  const fromOrToLabel = type === 'income' ? 'Ke Akun' : type === 'expense' ? 'Dari Akun' : 'Dari Akun';
+  const defaultAcc = accountKey || 'dompet';
+
+  const transferTo = Object.keys(state.accounts).find(k => k !== defaultAcc) || 'darurat';
+
+  modalContent.innerHTML = `
+    <h2>${title} <button onclick="closeModal()">✕</button></h2>
+    <div class="form-group">
+      <label>${fromOrToLabel}</label>
+      <select id="accFrom">${accountOptions(defaultAcc)}</select>
+    </div>
+    ${isTransfer ? `
+    <div class="form-group">
+      <label>Ke Akun</label>
+      <select id="accTo">${accountOptions(transferTo)}</select>
+    </div>` : ''}
+    <div class="form-group">
+      <label>Jumlah (Rp)</label>
+      <input type="number" id="amount" min="0" placeholder="0" />
+    </div>
+    <div class="form-group">
+      <label>Tanggal</label>
+      <input type="date" id="date" value="${todayISO()}" />
+    </div>
+    <div class="form-group">
+      <label>Catatan (opsional)</label>
+      <input type="text" id="note" placeholder="${isTransfer ? 'mis. Sisihkan darurat' : 'mis. Jajan bakso'}" />
+    </div>
+    <button class="submit" onclick="submitTx('${type}')">SIMPAN</button>
+  `;
+  modalBackdrop.classList.add('show');
+}
+
+function submitTx(type) {
+  const amount = parseFloat(document.getElementById('amount').value);
+  const date = document.getElementById('date').value || todayISO();
+  const note = document.getElementById('note').value.trim();
+  const accFrom = document.getElementById('accFrom').value;
+
+  if (!amount || amount <= 0) {
+    alert('Jumlah harus lebih dari 0');
+    return;
+  }
+
+  if (type === 'income') {
+    state.accounts[accFrom].balance += amount;
+    state.transactions.push({ type, amount, account: accFrom, date, note });
+  } else if (type === 'expense') {
+    if (state.accounts[accFrom].balance < amount) {
+      if (!confirm('Saldo tidak cukup. Lanjutkan?')) return;
+    }
+    state.accounts[accFrom].balance -= amount;
+    state.transactions.push({ type, amount, account: accFrom, date, note });
+  } else if (type === 'transfer') {
+    const accTo = document.getElementById('accTo').value;
+    if (accFrom === accTo) {
+      alert('Akun asal dan tujuan tidak boleh sama');
+      return;
+    }
+    if (state.accounts[accFrom].balance < amount) {
+      if (!confirm('Saldo tidak cukup. Lanjutkan?')) return;
+    }
+    state.accounts[accFrom].balance -= amount;
+    state.accounts[accTo].balance += amount;
+    state.transactions.push({ type, amount, account: accFrom, toAccount: accTo, date, note });
+  }
+
+  saveState();
+  closeModal();
+  render();
+}
+
+/* =========================================================
+   MODAL: ATUR SALDO AWAL
+========================================================= */
+function openSettingsModal() {
+  const fields = Object.entries(state.accounts).map(([k, a]) => `
+    <div class="form-group">
+      <label>${a.icon} ${a.name}</label>
+      <input type="number" id="set_${k}" value="${a.balance}" />
+    </div>
+  `).join('');
+
+  modalContent.innerHTML = `
+    <h2>Atur Saldo Awal <button onclick="closeModal()">✕</button></h2>
+    ${fields}
+    <button class="submit" onclick="saveSettings()">SIMPAN</button>
+  `;
+  modalBackdrop.classList.add('show');
+}
+
+function saveSettings() {
+  Object.keys(state.accounts).forEach(k => {
+    const v = parseFloat(document.getElementById('set_' + k).value) || 0;
+    state.accounts[k].balance = v;
+  });
+  saveState();
+  closeModal();
+  render();
+}
+
+/* =========================================================
+   INIT
+========================================================= */
+render();
+</script>
+</body>
+</html>
