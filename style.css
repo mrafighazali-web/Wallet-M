@@ -289,3 +289,36 @@ nav.bottom .icon { font-size: 18px; }
 .modal .submit:hover { opacity: 0.9; }
 
 .hidden { display: none !important; }
+
+/* ---------- CHART ---------- */
+.chart-wrap {
+  position: relative;
+  height: 220px;
+  margin-top: 8px;
+}
+
+.btn-ghost {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--text);
+  line-height: 1;
+}
+.btn-ghost:hover { background: var(--bg); }
+
+.btn-block {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  margin-top: 8px;
+}
+.btn-block:hover { background: var(--bg); }
