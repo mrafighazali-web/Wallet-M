@@ -2,12 +2,22 @@
    TRANSACTIONS — modal form, submit, dan item list
 ========================================================= */
 
+const INCOME_CATS  = ['Kiriman', 'Top Up', 'Lainnya'];
+const EXPENSE_CATS = ['Makan', 'Jajan', 'Transport', 'SPP', 'Kuliah', 'Darurat', 'Lainnya'];
+
+function catOptions(list, selected) {
+  return list.map(c =>
+    `<option value="${c}" ${c === selected ? 'selected' : ''}>${c}</option>`
+  ).join('');
+}
+
 function txItemHTML(t) {
   const isIncome  = t.type === 'income';
   const isExpense = t.type === 'expense';
   const sign = isIncome ? '+' : isExpense ? '-' : '⇄';
   const cls  = isIncome ? 'income' : isExpense ? 'expense' : '';
-  const title = t.note || (isIncome ? 'Pemasukan' : isExpense ? 'Pengeluaran' : 'Transfer');
+  const cat  = t.category && t.category !== 'Lainnya' ? ` • ${t.category}` : '';
+  const title = t.note || t.category || (isIncome ? 'Pemasukan' : isExpense ? 'Pengeluaran' : 'Transfer');
   const sub = isIncome
     ? `Masuk ke ${state.accounts[t.account].name}`
     : isExpense
@@ -17,7 +27,7 @@ function txItemHTML(t) {
     <li>
       <div>
         <div>${title}</div>
-        <div class="desc">${sub} • ${t.date}</div>
+        <div class="desc">${sub}${cat} • ${t.date}</div>
       </div>
       <div class="amount ${cls}">${sign}${fmt(t.amount)}</div>
     </li>
@@ -38,6 +48,14 @@ function openTxModal(type, accountKey) {
   const defaultAcc = accountKey || 'dompet';
   const transferTo = Object.keys(state.accounts).find(k => k !== defaultAcc) || 'darurat';
 
+  const catList = type === 'income' ? INCOME_CATS : EXPENSE_CATS;
+  const catField = isTransfer ? '' : `
+    <div class="form-group">
+      <label>Kategori</label>
+      <select id="category">${catOptions(catList, 'Lainnya')}</select>
+    </div>
+  `;
+
   modalContent.innerHTML = `
     <h2>${title} <button onclick="closeModal()">✕</button></h2>
     <div class="form-group">
@@ -53,6 +71,7 @@ function openTxModal(type, accountKey) {
       <label>Jumlah (Rp)</label>
       <input type="number" id="amount" min="0" placeholder="0" />
     </div>
+    ${catField}
     <div class="form-group">
       <label>Tanggal</label>
       <input type="date" id="date" value="${todayISO()}" />
@@ -71,6 +90,8 @@ function submitTx(type) {
   const date   = document.getElementById('date').value || todayISO();
   const note   = document.getElementById('note').value.trim();
   const accFrom = document.getElementById('accFrom').value;
+  const catEl = document.getElementById('category');
+  const category = catEl ? catEl.value : null;
 
   if (!amount || amount <= 0) {
     alert('Jumlah harus lebih dari 0');
@@ -79,13 +100,13 @@ function submitTx(type) {
 
   if (type === 'income') {
     state.accounts[accFrom].balance += amount;
-    state.transactions.push({ type, amount, account: accFrom, date, note });
+    state.transactions.push({ type, amount, account: accFrom, date, note, category });
   } else if (type === 'expense') {
     if (state.accounts[accFrom].balance < amount) {
       if (!confirm('Saldo tidak cukup. Lanjutkan?')) return;
     }
     state.accounts[accFrom].balance -= amount;
-    state.transactions.push({ type, amount, account: accFrom, date, note });
+    state.transactions.push({ type, amount, account: accFrom, date, note, category });
   } else if (type === 'transfer') {
     const accTo = document.getElementById('accTo').value;
     if (accFrom === accTo) {
@@ -130,4 +151,4 @@ function saveSettings() {
   saveState();
   closeModal();
   render();
-}
+                                                 }
