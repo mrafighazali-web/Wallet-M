@@ -58,6 +58,7 @@ function renderDashboard() {
           <div class="value">${fmt(s.balance)}</div>
         </div>
       </div>
+      <button class="btn-block" onclick="goToReports()">📊 Lihat Laporan Bulanan</button>
     </div>
 
     <div class="card">
@@ -82,8 +83,9 @@ function renderDashboard() {
   `;
 }
 
-/* ---------- Router sederhana ---------- */
+/* ---------- Router ---------- */
 function render() {
+  // update tab aktif di bottom nav
   document.querySelectorAll('nav.bottom button').forEach(b => {
     b.classList.toggle('active', b.dataset.nav === currentPage);
   });
@@ -93,6 +95,7 @@ function render() {
   else if (currentPage === 'digital') renderDigital();
   else if (currentPage === 'atm') renderAccount('atm');
   else if (currentPage === 'darurat') renderAccount('darurat');
+  else if (currentPage === 'reports') renderReports();
 }
 
 function goToAccount(key) {
@@ -102,6 +105,11 @@ function goToAccount(key) {
   } else {
     currentPage = key;
   }
+  render();
+}
+
+function goToReports() {
+  currentPage = 'reports';
   render();
 }
 
