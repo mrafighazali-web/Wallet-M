@@ -1,5 +1,5 @@
 /* =========================================================
-   DEBTS — hutang & piutang
+   DEBTS — hutang & piutang + riwayat cicilan
    hutang  = saya pinjam uang dari orang (uang masuk, saya wajib bayar)
    piutang = orang pinjam uang dari saya (uang keluar, orang wajib bayar)
 ========================================================= */
@@ -67,6 +67,7 @@ function renderDebts() {
 function debtItemHTML(d) {
   const remaining = d.amountTotal - d.amountPaid;
   const isPaid = remaining <= 0;
+  const paymentCount = (d.payments || []).length;
 
   const statusBadge = isPaid
     ? '<span class="badge badge-paid">✅ Lunas</span>'
@@ -84,6 +85,22 @@ function debtItemHTML(d) {
     else                dueInfo = `<div class="debt-due">Jatuh tempo: ${d.dueDate}</div>`;
   }
 
+  // progress bar cicilan
+  const progressPct = d.amountTotal > 0
+    ? Math.min(100, Math.round((d.amountPaid / d.amountTotal) * 100))
+    : 0;
+  const progressHTML = d.amountPaid > 0 && !isPaid ? `
+    <div class="progress-wrap">
+      <div class="progress-bar" style="width:${progressPct}%"></div>
+    </div>
+    <div class="progress-label">${progressPct}% (${paymentCount}× bayar)</div>
+  ` : (isPaid && paymentCount > 0 ? `
+    <div class="progress-wrap">
+      <div class="progress-bar" style="width:100%"></div>
+    </div>
+    <div class="progress-label">${paymentCount}× bayar • Selesai</div>
+  ` : '');
+
   const actionLabel = d.type === 'hutang' ? 'Bayar' : 'Terima';
 
   return `
@@ -98,12 +115,132 @@ function debtItemHTML(d) {
         </div>
         <div>${statusBadge}</div>
       </div>
+      ${progressHTML}
       <div class="debt-actions">
         ${!isPaid ? `<button class="btn-sm" onclick="openPaymentModal('${d.id}')">${actionLabel}</button>` : ''}
+        <button class="btn-sm" onclick="openDebtDetail('${d.id}')">Detail</button>
         <button class="btn-sm btn-danger" onclick="deleteDebt('${d.id}')">Hapus</button>
       </div>
     </li>
   `;
+}
+
+/* =========================================================
+   DETAIL + RIWAYAT CICILAN
+========================================================= */
+function openDebtDetail(debtId) {
+  const d = (state.debts || []).find(x => x.id === debtId);
+  if (!d) return;
+
+  const remaining = d.amountTotal - d.amountPaid;
+  const isPaid = remaining <= 0;
+  const isHutang = d.type === 'hutang';
+  const payments = [...(d.payments || [])].sort((a, b) =>
+    (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)
+  );
+
+  const paymentsHTML = payments.length === 0
+    ? '<div class="empty">Belum ada cicilan</div>'
+    : `<ul class="tx-list">${payments.map(p => `
+        <li>
+          <div>
+            <div>${fmt(p.amount)}</div>
+            <div class="desc">
+              ${p.date} • ${state.accounts[p.account]?.name || '-'}
+              ${p.note ? ' • ' + escapeHtml(p.note) : ''}
+            </div>
+          </div>
+          <button class="btn-sm btn-danger" onclick="deletePayment('${d.id}','${p.id}')">Hapus</button>
+        </li>
+      `).join('')}</ul>`;
+
+  const statusBadge = isPaid
+    ? '<span class="badge badge-paid">✅ Lunas</span>'
+    : d.amountPaid > 0
+      ? '<span class="badge badge-partial">Sebagian</span>'
+      : '<span class="badge badge-active">Aktif</span>';
+
+  modalContent.innerHTML = `
+    <h2>Detail ${isHutang ? 'Hutang' : 'Piutang'} <button onclick="closeModal()">✕</button></h2>
+
+    <div class="card" style="margin-bottom:12px;background:var(--bg)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div>
+          <div style="font-weight:600;font-size:15px">${escapeHtml(d.name)}</div>
+          <div class="desc" style="color:var(--muted);font-size:12px;margin-top:2px">
+            Pinjam: ${d.date}${d.dueDate ? ' • Jatuh tempo: ' + d.dueDate : ''}
+          </div>
+          ${d.note ? `<div class="desc" style="color:var(--muted);font-size:12px;margin-top:4px">📝 ${escapeHtml(d.note)}</div>` : ''}
+        </div>
+        <div>${statusBadge}</div>
+      </div>
+    </div>
+
+    <div class="summary-grid" style="margin-bottom:12px">
+      <div class="item">
+        <div class="label">Total</div>
+        <div class="value">${fmt(d.amountTotal)}</div>
+      </div>
+      <div class="item">
+        <div class="label">Terbayar</div>
+        <div class="value" style="color:var(--success)">${fmt(d.amountPaid)}</div>
+      </div>
+      <div class="item">
+        <div class="label">Sisa</div>
+        <div class="value" style="color:${isPaid ? 'var(--success)' : 'var(--danger)'}">${fmt(remaining)}</div>
+      </div>
+    </div>
+
+    <div class="card" style="background:var(--bg)">
+      <div class="balance-label" style="margin-bottom:8px">Riwayat Cicilan (${payments.length})</div>
+      ${paymentsHTML}
+    </div>
+
+    ${!isPaid ? `
+      <button class="submit" onclick="closeModal();openPaymentModal('${d.id}')">
+        ${isHutang ? 'BAYAR CICILAN' : 'TERIMA CICILAN'}
+      </button>
+    ` : ''}
+  `;
+  modalBackdrop.classList.add('show');
+}
+
+function deletePayment(debtId, paymentId) {
+  const d = (state.debts || []).find(x => x.id === debtId);
+  if (!d) return;
+  const p = (d.payments || []).find(x => x.id === paymentId);
+  if (!p) return;
+
+  if (!confirm(`Hapus cicilan ${fmt(p.amount)} tanggal ${p.date}?\nSaldo akun akan dikembalikan.`)) return;
+
+  const isHutang = d.type === 'hutang';
+
+  // Kembalikan saldo akun
+  if (isHutang) state.accounts[p.account].balance += p.amount;
+  else          state.accounts[p.account].balance -= p.amount;
+
+  // Update debt
+  d.amountPaid = Math.max(0, d.amountPaid - p.amount);
+  d.status = d.amountPaid >= d.amountTotal ? 'paid' : 'active';
+  d.payments = (d.payments || []).filter(x => x.id !== paymentId);
+
+  // Hapus transaksi terkait (cari berdasarkan refDebtId + amount + date + type)
+  const expectedType = isHutang ? 'expense' : 'income';
+  const idx = state.transactions.findIndex(t =>
+    t.refDebtId === d.id &&
+    t.type === expectedType &&
+    t.amount === p.amount &&
+    t.date === p.date
+  );
+  if (idx >= 0) state.transactions.splice(idx, 1);
+
+  saveState();
+  // refresh detail modal
+  openDebtDetail(debtId);
+  // refresh halaman di belakang (kalau modal ditutup)
+  render();
+  // buka lagi karena render() menghapus modal
+  openDebtDetail(debtId);
 }
 
 /* ---------- Form: Tambah Hutang/Piutang ---------- */
@@ -160,11 +297,9 @@ function submitDebt(type) {
     if (!confirm('Saldo tidak cukup. Lanjutkan?')) return;
   }
 
-  // Update saldo akun
   if (isHutang) state.accounts[account].balance += amount;
   else          state.accounts[account].balance -= amount;
 
-  // Buat debt dulu supaya id bisa dipakai di transaksi
   const newDebt = {
     id: 'd_' + Date.now(),
     type,
@@ -179,7 +314,6 @@ function submitDebt(type) {
   };
   state.debts.push(newDebt);
 
-  // Catat transaksi utama
   state.transactions.push({
     type: isHutang ? 'income' : 'expense',
     amount,
@@ -208,7 +342,7 @@ function openPaymentModal(debtId) {
 
   modalContent.innerHTML = `
     <h2>${title} <button onclick="closeModal()">✕</button></h2>
-    <div class="card" style="margin-bottom:12px">
+    <div class="card" style="margin-bottom:12px;background:var(--bg)">
       <div class="balance-label">Sisa</div>
       <div style="font-size:20px;font-weight:700">${fmt(remaining)}</div>
     </div>
@@ -226,7 +360,7 @@ function openPaymentModal(debtId) {
     </div>
     <div class="form-group">
       <label>Catatan (opsional)</label>
-      <input type="text" id="payNote" />
+      <input type="text" id="payNote" placeholder="mis. cicilan ke-2" />
     </div>
     <button class="submit" onclick="submitPayment('${debtId}')">${btnLabel}</button>
   `;
@@ -252,11 +386,9 @@ function submitPayment(debtId) {
     if (!confirm('Saldo tidak cukup. Lanjutkan?')) return;
   }
 
-  // update saldo akun
   if (isHutang) state.accounts[account].balance -= amount;
   else          state.accounts[account].balance += amount;
 
-  // update debt
   d.amountPaid += amount;
   if (d.amountPaid >= d.amountTotal) d.status = 'paid';
   d.payments = d.payments || [];
@@ -265,7 +397,6 @@ function submitPayment(debtId) {
     date, amount, account, note
   });
 
-  // catat transaksi utama
   state.transactions.push({
     type: isHutang ? 'expense' : 'income',
     amount,
@@ -281,7 +412,7 @@ function submitPayment(debtId) {
   render();
 }
 
-/* ---------- Hapus ---------- */
+/* ---------- Hapus Debt ---------- */
 function deleteDebt(debtId) {
   const d = (state.debts || []).find(x => x.id === debtId);
   if (!d) return;
@@ -297,4 +428,4 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (m) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[m]));
-}
+            }
